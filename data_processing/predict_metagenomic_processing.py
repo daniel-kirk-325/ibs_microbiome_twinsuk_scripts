@@ -272,10 +272,10 @@ table = mbt_samples[mbt_samples.iid.isin(ibs_status_last_date_date.keys())][['ii
 # Make df containing only observations where IBS came before stool 
 # sampling per participant
 pre_stool_df = ibs.loc[pre_stool_ixs]
-pre_stool_ixs = pre_stool_ixs[pre_stool_ixs.ParticipantID.isin(mbt_mrd.iid)] 
+pre_stool_df = pre_stool_df[pre_stool_df.ParticipantID.isin(mbt_mrd.iid)] 
 
 ## Get all Rome III responses
-pmd_romeIII = pre_stool_ixs[(pre_stool_ixs.Origin == 'Rome_III_PH_codes') | (pre_stool_ixs.Origin == 'Rome_III_Q18')]
+pmd_romeIII = pre_stool_df[(pre_stool_df.Origin == 'Rome_III_PH_codes') | (pre_stool_df.Origin == 'Rome_III_Q18')]
 
 ## If any Rome III response before stool sampling date == 1, participant 
 ## is given response code 1
