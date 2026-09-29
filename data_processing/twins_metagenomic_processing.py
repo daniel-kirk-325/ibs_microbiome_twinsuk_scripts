@@ -19,8 +19,8 @@ Explanation:
         1) Load microbiome data
         2) Process metadata and remove those in PREDICT-1
         3) Add IBS data
-        4) Keep only observations with IBS data <1 year after metabolomics/microbiome 
-            sampling and <3 years before
+        4) Keep only observations with stool <1 year before 
+           most recent IBS response date and <3 years after
         5) Keep true controls only 
         6) Remove those with IBD
 '''
@@ -222,68 +222,68 @@ print(f"{len(overlap)} participants have IBS data")
 ibs = ibs[ibs.ParticipantID.isin(overlap)]
 mbt = mbt[mbt.iid.isin(overlap)]
 
-#%% 4) Keep only observations with IBS data <1 year after metabolomics/microbiome 
-     # sampling and <3 years before
+#%% 4) Keep only observations with stool <1 year after 
+     # most recent IBS response date and <3 years before
 
-## Get IBS status at most recent response date before metab sampling
+## Get IBS status at most recent response date before stool sampling
 ibs_status_last_date_response = {}
 ibs_status_last_date_date = {}
 
-## Get index locations of IBS responses before each metabs reading per participant
-pre_metabs_ixs, most_recent_observation_ix = [], []
+## Get index locations of IBS responses before each stool reading per participant
+pre_stool_ixs, most_recent_observation_ix = [], []
 
-## Track participants who have metabolomics data before IBS response date
+## Track participants who have stool data before IBS response date
 ## and get the number of days of this difference
-metabs_before_ibs, date_diffs = [], []
+stool_before_ibs, date_diffs = [], []
 
 for i in mbt.iid:
     date = pd.to_datetime(mbt[mbt.iid == i]['dov'].values[0]) + np.timedelta64(365, 'D')
     df = ibs.loc[(ibs.ParticipantID == i)]
     
     if np.any(df.ResponseDate <= date):
-        df_pre_metabs = df.loc[df.ResponseDate <= date]
+        df_pre_stool = df.loc[df.ResponseDate <= date]
         
         # Get most recent response
-        ibs_status_last_date_response[i] = df_pre_metabs['ibs_status_upd'].values[-1]
+        ibs_status_last_date_response[i] = df_pre_stool['ibs_status_upd'].values[-1]
         
         # Get most recent date
-        ibs_status_last_date_date[i] = df_pre_metabs['ResponseDate'].values[-1]
+        ibs_status_last_date_date[i] = df_pre_stool['ResponseDate'].values[-1]
         
         # Get ix locations 
-        pre_metabs_ixs.extend(df_pre_metabs.index)
+        pre_stool_ixs.extend(df_pre_stool.index)
         
         # Get ix location of most recent observation
-        most_recent_observation_ix.append(df_pre_metabs.index[-1])
+        most_recent_observation_ix.append(df_pre_stool.index[-1])
 
     else:
-        # Otherwise there is no IBS response before most recent metabs reading 
+        # Otherwise there is no IBS response before most recent stool reading 
         # so note the difference in days 
-        metabs_before_ibs.append(i)
+        stool_before_ibs.append(i)
         date_diffs.append((df.ResponseDate.min() - date).days)
         
 
-print(f"{len(metabs_before_ibs)} participants did not have IBS data before most recent sampling date")
+print(f"{len(stool_before_ibs)} participants did not have IBS data before most recent sampling date")
 
-mbt_pre_metabs = mbt[mbt.iid.isin(metabs_before_ibs)]
+mbt_pre_stool = mbt[mbt.iid.isin(stool_before_ibs)]
 
 ## Drop participants without IBS information prior to sampling
 mbt_mrd = pd.merge(mbt, ibs.loc[most_recent_observation_ix][['ParticipantID', 'ResponseDate', 'ibs_status_upd']].rename(columns = {'ParticipantID':'iid'}), on = 'iid')
 
-#### Get ID, age at metabs visit, IBSRomIII, IBS overall of the participants 
+#### Get ID, age at stool visit, IBSRomIII, IBS overall of the participants 
 #### in mbt_mrd
 table = mbt[mbt.iid.isin(ibs_status_last_date_date.keys())][['iid', 'age_Mb_sample']]
 
-# Make df containing only observations where IBS came before metabolomics 
+# Make df containing only observations where IBS came before stool 
 # sampling per participant
-pre_metabs_df = ibs.loc[pre_metabs_ixs]
-pre_metabs_df = pre_metabs_df[pre_metabs_df.ParticipantID.isin(mbt_mrd.iid)] 
+pre_stool_df = ibs.loc[pre_stool_ixs]
+pre_stool_df = pre_stool_df[pre_stool_df.ParticipantID.isin(mbt_mrd.iid)] 
 
 
 ## Get all Rome III responses
-pmd_romeIII = pre_metabs_df[(pre_metabs_df.Origin == 'Rome_III_PH_codes') | (pre_metabs_df.Origin == 'Rome_III_Q18')]
+pmd_romeIII = pre_stool_df[(pre_stool_df.Origin == 'Rome_III_PH_codes') | (pre_stool_df.Origin == 'Rome_III_Q18')]
 
 
-## If any Rome III response before metabs sampling date == 1, participant 
+## If any Rome III response before stool sampling date == 1, participant 
 ## is given response code 1
 rome_responses = []
 for i in pmd_romeIII.ParticipantID.unique():
