@@ -352,7 +352,7 @@ print(genus_absent)
 # [13] "Agathobacter" 
 
 # Retain IBS-associated phages which infect hosts present in bacterial data
-host_in_twins <- all_names[all_names$host_genus %in% genus_present, ]
+host_in_twins <- all_names[all_names$host_genus_merged %in% genus_present, ]
 known_host <- top_phages[top_phages %in% host_in_twins$sudo_phage_ID] # length = 18
 
 
