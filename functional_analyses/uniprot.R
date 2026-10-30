@@ -117,7 +117,7 @@ df_gene_fam <- cbind(df_gene_fam[, c("uniprotid", "EC number", "Protein names")]
 
 ## Get minimum non-zero for later analyses 
 sample_abundance <- unlist(df_gene_fam[grepl('Abun', names(df_gene_fam))])
-one_tenth_min_non_zero <- min(sample_abundance[sample_abundance > 0])/10
+one_tenth_min_non_zero <- min(sample_abundance[sample_abundance > 0])/10    # 1.68E-05
 rm(sample_abundance)
 
 ## Some entries have multiple ECs per uniprotid, meaning if we group by EC number, these will be left out. 
@@ -344,7 +344,7 @@ predict_up <- predict_up[, c('uniprotid', 'EC number', 'Protein names', ids_to_k
 
 ## Get minimum non-zero for later analyses 
 sample_abundance <- unlist(predict_up[grepl('Abun', names(predict_up))])
-one_tenth_min_non_zero <- min(sample_abundance[sample_abundance > 0])/10
+one_tenth_min_non_zero <- min(sample_abundance[sample_abundance > 0])/10   # 6.34019e-05
 rm(sample_abundance)
 
 
