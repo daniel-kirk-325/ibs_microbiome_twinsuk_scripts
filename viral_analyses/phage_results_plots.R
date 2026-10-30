@@ -8,6 +8,7 @@ library(tidyr)
 library(tibble)
 library(circlize)
 
+
 # Explanation  ------------------------------------------------------------
 
 # Uses the results generated from the phage analyses to generate figures and 
@@ -27,7 +28,7 @@ viral_naming_map <- read.csv("data_deposition/gut_paper/gut_paper_datasets/metag
 ## Load phage x IBS LMM results
 all_results <- read.csv("data_deposition/gut_paper/gut_paper_results/phage_results/phage_lmm.csv")
 
-# Get results which passed FDR
+# Get results that passed FDR
 res_df <- all_results %>%   filter(q_value < 0.05, !is.na(q_value))
 
 
@@ -111,8 +112,8 @@ if(nrow(count_matrix) == 2 & ncol(count_matrix) == 2){
 
 # Format label with OR and p-value for plot
 plot_label <- paste0('OR(95%CI) = ', round(or_result$measure[2,1], 2), 
-                ' (', round(or_result$measure[2,2],2), '-', round(or_result$measure[2,3],2), ')',
-                '\nChi-squared p-value = ', signif(chi_sq$p.value, 2), '\n*')
+                     ' (', round(or_result$measure[2,2],2), '-', round(or_result$measure[2,3],2), ')',
+                     '\nChi-squared p-value = ', signif(chi_sq$p.value, 2), '\n*')
 
 ## OR = 0.45
 
@@ -146,7 +147,7 @@ plot <- ggplot(rep_cycle_prop_long, aes(x = group, y = proportion, fill = rep_cy
     axis.title.y = element_text(size = 23),
     plot.margin = margin(1.5, 2, 2, 2),
     panel.spacing = unit(0, "lines")
-    ) +
+  ) +
   annotate("segment", x = 1, xend = 2, y = 1.04, yend = 1.04, size = 0.8) +
   annotate("segment", x = 1, xend = 1, y = 1.00, yend = 1.04, size = 0.8) +
   annotate("segment", x = 2, xend = 2, y = 1.00, yend = 1.04, size = 0.8) +
@@ -171,7 +172,6 @@ ordering_hosts <- sort(table(plot_df$host_genus))
 
 #### Modify phage names which are repeated
 repeated_phage <- names(table(plot_df$Virus)[table(plot_df$Virus) == 1])
-
 plot_df <- plot_df %>%
   group_by(Virus) %>%
   mutate(
@@ -188,55 +188,44 @@ plot_df <- plot_df %>%
   ) %>%
   select(-dup_count, -row_num)
 
-## Format phage names 
-plot_df$Virus_label <- paste0("<i>", plot_df$Virus_label, "</i>")
-
+## Format phage names (plain text – italics applied later via font=)
 plot_df <- plot_df %>%
   arrange(host_genus, Virus_label) %>%
   mutate(Virus_label = as.character(Virus_label))
-
 ordering_viruses <- unique(plot_df$Virus_label)  
 ordering_hosts <- names(sort(table(plot_df$host_genus)))
-
 sector_order <- c(ordering_viruses, ordering_hosts)
 
-### 2. Links
 
+### 2. Links
 # Assuming 'color_group' is consistent within each Virus (as it should be)
 link_color_df <- plot_df %>%
   group_by(Virus_label, host_genus) %>%
   summarise(link_col = first(ifelse(OR > 1, "#FF000088", "#0000FF88")), .groups = "drop")
-
 df_links <- plot_df %>%
   select(host_genus, Virus_label) %>%
   mutate(value = 1) %>%
   group_by(host_genus, Virus_label) %>%
   summarise(value = n(), .groups = "drop") %>%
   left_join(link_color_df, by = c("Virus_label", "host_genus"))
-
 link_colors <- df_links$link_col  # Now matches exactly
 
 
 ### 3. Sector colors
-
 host_colors <- rainbow(length(ordering_hosts))
 names(host_colors) <- ordering_hosts
-
 virus_colors <- rep("grey30", length(ordering_viruses))
 names(virus_colors) <- ordering_viruses
-
 grid_col <- c(virus_colors, host_colors)
 
 
 ### 4. Gaps
-
 gap_deg <- rep(0.5, length(sector_order))
 gap_deg[length(sector_order)] <- 15
 gap_deg[length(ordering_viruses)] <- 15
 
 
 ### 5. Initialize 
-
 png(
   "phage_circos.png",
   width = 4000,
@@ -256,7 +245,6 @@ circos.par(
 
 
 ###  6. Chord diagram
-
 chordDiagram(
   df_links[, c("Virus_label", "host_genus", "value")],  
   order = sector_order,
@@ -269,7 +257,6 @@ chordDiagram(
 
 
 ###  7. OUTER LABEL TRACK 
-
 circos.trackPlotRegion(
   ylim = c(0, 1),
   track.height = mm_h(12),
@@ -281,6 +268,8 @@ circos.trackPlotRegion(
     
     # Hosts (right side)
     if (sector %in% ordering_hosts) {
+      # Italicise genus names unless exception
+      use_italic <- !(sector %in% c("UBA11524", "SFHK01") || grepl("CAG-", sector, fixed = TRUE))
       circos.text(
         xcenter,
         1.65,                  
@@ -289,32 +278,31 @@ circos.trackPlotRegion(
         niceFacing = TRUE,
         adj = c(0, 0.5),
         cex = 0.55,
-        font = 2,
+        font = if (use_italic) 4 else 2,   # 4 = bold italic, 2 = bold
         clipping = FALSE      
       )
     }
     
-    # Viruses 
+    # Viruses (all italicised)
     if (sector %in% ordering_viruses) {
-      label <- sub("</i>$", "", sub("^<i>", "", sector))
       circos.text(
         xcenter,
         1.55,                  
-        label,
+        sector,                 # plain name (no <i> tags)
         facing = "reverse.clockwise",
         niceFacing = TRUE,
         adj = c(1, 0.5),
         cex = 0.25,
+        font = 3,               # 3 = italic
         clipping = FALSE
       )
     }
   }
 )
 
+
 ###  8. Title + legend
-
 title("IBS-associated vOTUs (FDR<0.05) \nGrouped by Predicted Host Genus", cex.main = 1, line = -2)
-
 legend(
   x = "bottomleft",
   inset = c(0.35, 0),
@@ -326,7 +314,6 @@ legend(
   cex = 1,
   xpd = TRUE
 )
-
 dev.off()
 circos.clear()
 
@@ -365,8 +352,37 @@ ordering <- host_OR_counts %>% group_by(host_genus) %>% summarise(sum(n)) %>% ar
 ## Get IBS-assoicated genera 
 top_genus <- gsub('_.*', '', top_bacteria$X)
 
-## Add bold labels to genus name if this genus is also in IBS-associated bacteria
-host_OR_counts$host_genus_bold <- ifelse(host_OR_counts$host_genus %in% top_genus, paste0("**", host_OR_counts$host_genus, "**"), host_OR_counts$host_genus)
+#### Make genera found in bacterial analysis bold, and italicise genus names
+
+## Get IBS-associated genera 
+top_genus <- gsub('_.*', '', top_bacteria$X)
+
+## Genera that should NOT be italicised
+no_italic_pattern <- "UBA11524|SFHK01|CAG-"
+
+## Helper: italicise the genus part of a label
+## - Names matching no_italic_pattern are left unchanged
+## - Labels with a family prefix, e.g. "(Family) UBA1234", only have the genus part italicised
+italicise_genus <- function(label) {
+  ifelse(
+    grepl(no_italic_pattern, label),
+    label,
+    ifelse(
+      grepl("^\\(.*?\\) ", label),
+      sub("^(\\(.*?\\) )(.*)$", "\\1<i>\\2</i>", label),
+      paste0("<i>", label, "</i>")
+    )
+  )
+}
+
+## Add italics, then bold if this genus is also in IBS-associated bacteria
+host_OR_counts$host_genus_fmt <- italicise_genus(host_OR_counts$host_genus)
+
+host_OR_counts$host_genus_bold <- ifelse(
+  host_OR_counts$host_genus %in% top_genus,
+  paste0("<b>", host_OR_counts$host_genus_fmt, "</b>"),
+  host_OR_counts$host_genus_fmt
+)
 
 ## Enforce ordering after updating text labels
 host_OR_counts$host_plot <- factor(
@@ -377,7 +393,7 @@ host_OR_counts$host_plot <- factor(
 plot <- ggplot(host_OR_counts, aes(x = host_plot, y = n, fill = OR_Type)) +
   geom_bar(stat = "identity", position = "stack") +
   scale_fill_manual(values = c("Positive" = "#E41A1C", "Negative" = "steelblue")) +
-  labs(x = "Predicted Bacterial Host", y = "Count", fill = "vOTU ssociation\n with IBS") +
+  labs(x = "Predicted Bacterial Host", y = "Count", fill = "vOTU association\n with IBS") +
   ggtitle("Host Predictions \nof IBS-Associated vOTUs") +
   coord_flip() +
   theme_bw() +
@@ -430,6 +446,9 @@ host_adj_df <- rbind(host_main[cols], host_adj[cols])
 # Update labels 
 host_adj_df$label <- paste0('(', host_adj_df$Bacteria, ') ', host_adj_df$Virus)
 host_adj_df$label <- gsub('_', ' ', host_adj_df$label)
+
+# Remove unknown genera from host label
+host_adj_df[grepl('UBA', host_adj_df$label), 'label'] <- "(Prevotella) phage 88005"
 
 # Sort by OR original
 order <- host_adj_df[host_adj_df$Analysis == 'Overall', ] %>% arrange(OR) %>% pull(label)
@@ -530,7 +549,6 @@ table(amg_sig$subheader)
 # Only two of these - those which are not "Unknown" in the previous 4 tables - are "True" for "potential_amg"
 
 red <- amg_sig[amg_sig$module != '', c('gene', "gene_description", 'module', 'sheet', 'header', 'subheader')]
-
 
 
 
